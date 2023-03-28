@@ -8,7 +8,7 @@ This example shows how to use the gptimer to generate a SPWM signal using the `L
 Connect the GPIO to an oscilloscope to see the generated signal:
 |ledc channel| GPIO  |
 |:----------:|:-----:|
-| Channel 0  | GPIO4 |
-| Channel 1  | GPIO5 |
+| Channel 0  | pa    |
+| Channel 1  | pb    |
 
 The example uses fixed PWM frequency of 15 kHz.The gptimer executes 1000000/CAR times per second.
