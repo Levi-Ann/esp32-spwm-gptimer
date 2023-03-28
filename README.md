@@ -1,5 +1,6 @@
 # esp32-spwm-gptimer
 achieve SPWM (sinusoidal PWM)  by the ESP32 microcontroller
+generate 50hz SPWM wave
 
 This example shows how to use the gptimer to generate a SPWM signal using the `LOW SPEED` mode.
 
