@@ -18,8 +18,6 @@ static const char *TAG = "ledc_spwm";
 #define LEDC_DUTY_RES           LEDC_TIMER_10_BIT // Set duty resolution to 10 bits
 #define LEDC_MAX_DUTY			  (1023)
 #define LEDC_PWM_NUM			  (2)
-#define LEDC_PWM0_GPIO			(4)
-#define LEDC_PWM1_GPIO			(5)
 
 ledc_channel_config_t led_channel[LEDC_PWM_NUM];
 static gptimer_handle_t gptimer = NULL;
