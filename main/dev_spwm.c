@@ -9,15 +9,15 @@
 #include "driver/gptimer.h"
 #include "hal/ledc_hal.h"
 #include "soc/ledc_struct.h"
-
 #include "dev_spwm.h"
 
 static const char *TAG = "ledc_spwm";
-#define LEDC_TIMER              LEDC_TIMER_0
-#define LEDC_MODE               LEDC_LOW_SPEED_MODE
-#define LEDC_DUTY_RES           LEDC_TIMER_10_BIT // Set duty resolution to 10 bits
-#define LEDC_MAX_DUTY			  (1023)
-#define LEDC_PWM_NUM			  (2)
+#define GPTIMER				1
+#define LEDC_TIMER			LEDC_TIMER_0
+#define LEDC_MODE			LEDC_LOW_SPEED_MODE
+#define LEDC_DUTY_RES		LEDC_TIMER_10_BIT // Set duty resolution to 10 bits
+#define LEDC_MAX_DUTY		(1023)
+#define LEDC_PWM_NUM		(2)
 
 ledc_channel_config_t led_channel[LEDC_PWM_NUM];
 static gptimer_handle_t gptimer = NULL;
@@ -35,16 +35,16 @@ static void led_channel_init(int i, ledc_channel_t channel, uint32_t timer_sel, 
 	led_channel[i].gpio_num = gpio;
 	led_channel[i].speed_mode = LEDC_MODE;
 	led_channel[i].timer_sel  = timer_sel;
-  led_channel[i].hpoint     = 0;
+  	led_channel[i].hpoint     = 0;
 }
 
 static void ledc_pwm_init(int pa, int pb){
 	ledc_timer_config_t led_timer = {
-	.duty_resolution = LEDC_DUTY_RES,
-	.freq_hz = CAR,
-	.speed_mode = LEDC_MODE,
-	.timer_num = LEDC_TIMER,
-    .clk_cfg = LEDC_AUTO_CLK,
+		.duty_resolution = LEDC_DUTY_RES,
+		.freq_hz = CAR,
+		.speed_mode = LEDC_MODE,
+		.timer_num = LEDC_TIMER,
+		.clk_cfg = LEDC_AUTO_CLK,
 	};
 	ledc_timer_config(&led_timer);
  
@@ -74,6 +74,7 @@ static inline void dev_update_duty(int chn, int duty) {
     LEDC.channel_group[LEDC_MODE].channel[chn].conf0.low_speed_update = 1;
 }
 
+#if GPTIMER
 static bool IRAM_ATTR timer_on_alarm_cb_v1(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_data)
 {
     uint32_t i = isr_cnt % LEN;
@@ -122,6 +123,50 @@ static void alarm_init(int x) {
     ESP_ERROR_CHECK(gptimer_start(gptimer));
 }
 
+#else
+static bool IRAM_ATTR timer_on_alarm_cb_v1(void *args) {
+    uint32_t i = isr_cnt % LEN;
+    uint32_t j = (i + LEN/2) % LEN;
+
+    dev_update_duty(0, duty[i]);    
+    dev_update_duty(1, duty[j]);
+
+    isr_cnt ++;
+    return 0;
+}
+
+static void alarm_init(int x) {
+    static uint8_t inited = 0;
+    if(x == 0 && inited == 1){
+        timer_pause(TIMER_GROUP_0, TIMER_0);
+        ESP_LOGI(TAG, "GP STOP");
+        return;
+    }
+    if (x && inited == 1) {
+        timer_start(TIMER_GROUP_0, TIMER_0);
+        ESP_LOGI(TAG, "GP START");
+        return;   
+    }
+    inited = 1;
+    timer_config_t config = {
+        .divider = TIMER_DIVIDER,
+        .counter_dir = TIMER_COUNT_UP,
+        .counter_en = TIMER_PAUSE,
+        .alarm_en = TIMER_ALARM_EN,
+        .auto_reload = true,
+    };
+    timer_init(TIMER_GROUP_0, TIMER_0, &config);
+    timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 0);
+
+    /* Configure the alarm value and the interrupt on alarm. */
+    timer_set_alarm_value(TIMER_GROUP_0, TIMER_0, TIMER_SCALE/CAR);
+    timer_enable_intr(TIMER_GROUP_0, TIMER_0);
+    
+    timer_isr_callback_add(TIMER_GROUP_0, TIMER_0, timer_on_alarm_cb_v1, NULL, 0);
+
+    timer_start(TIMER_GROUP_0, TIMER_0);
+}
+#endif
 
 void spwm_init(int pa, int pb){
     duty_init();
