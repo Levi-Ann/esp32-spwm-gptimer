@@ -4,6 +4,7 @@ achieve SPWM (sinusoidal PWM)  by the ESP32 microcontroller.
 generate 50hz SPWM wave
 
 This example shows how to use the gptimer to generate a SPWM signal using the `LOW SPEED` mode.
+If your idf version is below v5.0, you need to set GPTIMER to 0.
 
 Connect the GPIO to an oscilloscope to see the generated signal:
 |ledc channel| GPIO  |
